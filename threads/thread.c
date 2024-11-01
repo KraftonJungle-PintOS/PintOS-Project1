@@ -24,6 +24,11 @@
    Do not modify this value. */
 #define THREAD_BASIC 0xd42df210
 
+
+/* Sleep list를 선언 */
+static struct list sleep_list;  // 스레드를 재울 대기 리스트
+
+
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
 static struct list ready_list;
@@ -109,6 +114,7 @@ thread_init (void) {
 	lock_init (&tid_lock);
 	list_init (&ready_list);
 	list_init (&destruction_req);
+    list_init(&sleep_list);  // sleep_list 초기화
 
 	/* Set up a thread structure for the running thread. */
 	initial_thread = running_thread ();
@@ -346,6 +352,7 @@ thread_get_recent_cpu (void) {
 	/* TODO: Your implementation goes here */
 	return 0;
 }
+
 
 /* Idle thread.  Executes when no other thread is ready to run.
 
