@@ -4,7 +4,7 @@ Kernel command line: -q run alarm-multiple
 Pintos booting with: 
 	base_mem: 0x0 ~ 0x9fc00 (Usable: 639 kB)
 	ext_mem: 0x100000 ~ 0x13e0000 (Usable: 19,328 kB)
-Calibrating timer...  261,734,400 loops/s.
+Calibrating timer...  314,163,200 loops/s.
 Boot complete.
 Executing 'alarm-multiple':
 (alarm-multiple) begin
@@ -13,6 +13,184 @@ Executing 'alarm-multiple':
 (alarm-multiple) thread 1 sleeps 20 ticks each time, and so on.
 (alarm-multiple) If successful, product of iteration count and
 (alarm-multiple) sleep duration will appear in nondescending order.
+Thread A: tid=3, wake_up_tick=135
+Thread B: tid=1, wake_up_tick=575
+Thread A: tid=4, wake_up_tick=145
+Thread B: tid=3, wake_up_tick=135
+Thread A: tid=4, wake_up_tick=145
+Thread B: tid=1, wake_up_tick=575
+Thread A: tid=5, wake_up_tick=155
+Thread B: tid=3, wake_up_tick=135
+Thread A: tid=5, wake_up_tick=155
+Thread B: tid=4, wake_up_tick=145
+Thread A: tid=5, wake_up_tick=155
+Thread B: tid=1, wake_up_tick=575
+Thread A: tid=6, wake_up_tick=165
+Thread B: tid=3, wake_up_tick=135
+Thread A: tid=6, wake_up_tick=165
+Thread B: tid=4, wake_up_tick=145
+Thread A: tid=6, wake_up_tick=165
+Thread B: tid=5, wake_up_tick=155
+Thread A: tid=6, wake_up_tick=165
+Thread B: tid=1, wake_up_tick=575
+Thread A: tid=7, wake_up_tick=175
+Thread B: tid=3, wake_up_tick=135
+Thread A: tid=7, wake_up_tick=175
+Thread B: tid=4, wake_up_tick=145
+Thread A: tid=7, wake_up_tick=175
+Thread B: tid=5, wake_up_tick=155
+Thread A: tid=7, wake_up_tick=175
+Thread B: tid=6, wake_up_tick=165
+Thread A: tid=7, wake_up_tick=175
+Thread B: tid=1, wake_up_tick=575
+Thread A: tid=3, wake_up_tick=145
+Thread B: tid=4, wake_up_tick=145
+Thread A: tid=3, wake_up_tick=145
+Thread B: tid=5, wake_up_tick=155
+Thread A: tid=4, wake_up_tick=165
+Thread B: tid=5, wake_up_tick=155
+Thread A: tid=4, wake_up_tick=165
+Thread B: tid=6, wake_up_tick=165
+Thread A: tid=4, wake_up_tick=165
+Thread B: tid=7, wake_up_tick=175
+Thread A: tid=3, wake_up_tick=155
+Thread B: tid=5, wake_up_tick=155
+Thread A: tid=3, wake_up_tick=155
+Thread B: tid=6, wake_up_tick=165
+Thread A: tid=5, wake_up_tick=185
+Thread B: tid=6, wake_up_tick=165
+Thread A: tid=5, wake_up_tick=185
+Thread B: tid=4, wake_up_tick=165
+Thread A: tid=5, wake_up_tick=185
+Thread B: tid=7, wake_up_tick=175
+Thread A: tid=5, wake_up_tick=185
+Thread B: tid=1, wake_up_tick=575
+Thread A: tid=3, wake_up_tick=165
+Thread B: tid=6, wake_up_tick=165
+Thread A: tid=3, wake_up_tick=165
+Thread B: tid=4, wake_up_tick=165
+Thread A: tid=3, wake_up_tick=165
+Thread B: tid=7, wake_up_tick=175
+Thread A: tid=6, wake_up_tick=205
+Thread B: tid=7, wake_up_tick=175
+Thread A: tid=6, wake_up_tick=205
+Thread B: tid=5, wake_up_tick=185
+Thread A: tid=6, wake_up_tick=205
+Thread B: tid=1, wake_up_tick=575
+Thread A: tid=4, wake_up_tick=185
+Thread B: tid=7, wake_up_tick=175
+Thread A: tid=4, wake_up_tick=185
+Thread B: tid=5, wake_up_tick=185
+Thread A: tid=4, wake_up_tick=185
+Thread B: tid=6, wake_up_tick=205
+Thread A: tid=3, wake_up_tick=175
+Thread B: tid=7, wake_up_tick=175
+Thread A: tid=3, wake_up_tick=175
+Thread B: tid=5, wake_up_tick=185
+Thread A: tid=7, wake_up_tick=225
+Thread B: tid=5, wake_up_tick=185
+Thread A: tid=7, wake_up_tick=225
+Thread B: tid=4, wake_up_tick=185
+Thread A: tid=7, wake_up_tick=225
+Thread B: tid=6, wake_up_tick=205
+Thread A: tid=7, wake_up_tick=225
+Thread B: tid=1, wake_up_tick=575
+Thread A: tid=3, wake_up_tick=185
+Thread B: tid=5, wake_up_tick=185
+Thread A: tid=3, wake_up_tick=185
+Thread B: tid=4, wake_up_tick=185
+Thread A: tid=3, wake_up_tick=185
+Thread B: tid=6, wake_up_tick=205
+Thread A: tid=5, wake_up_tick=215
+Thread B: tid=6, wake_up_tick=205
+Thread A: tid=5, wake_up_tick=215
+Thread B: tid=7, wake_up_tick=225
+Thread A: tid=4, wake_up_tick=205
+Thread B: tid=6, wake_up_tick=205
+Thread A: tid=4, wake_up_tick=205
+Thread B: tid=5, wake_up_tick=215
+Thread A: tid=3, wake_up_tick=195
+Thread B: tid=6, wake_up_tick=205
+Thread A: tid=6, wake_up_tick=245
+Thread B: tid=5, wake_up_tick=215
+Thread A: tid=6, wake_up_tick=245
+Thread B: tid=7, wake_up_tick=225
+Thread A: tid=6, wake_up_tick=245
+Thread B: tid=1, wake_up_tick=575
+Thread A: tid=4, wake_up_tick=225
+Thread B: tid=5, wake_up_tick=215
+Thread A: tid=4, wake_up_tick=225
+Thread B: tid=7, wake_up_tick=225
+Thread A: tid=4, wake_up_tick=225
+Thread B: tid=6, wake_up_tick=245
+Thread A: tid=5, wake_up_tick=245
+Thread B: tid=7, wake_up_tick=225
+Thread A: tid=5, wake_up_tick=245
+Thread B: tid=4, wake_up_tick=225
+Thread A: tid=5, wake_up_tick=245
+Thread B: tid=6, wake_up_tick=245
+Thread A: tid=5, wake_up_tick=245
+Thread B: tid=1, wake_up_tick=575
+Thread A: tid=7, wake_up_tick=275
+Thread B: tid=6, wake_up_tick=245
+Thread A: tid=7, wake_up_tick=275
+Thread B: tid=5, wake_up_tick=245
+Thread A: tid=7, wake_up_tick=275
+Thread B: tid=1, wake_up_tick=575
+Thread A: tid=4, wake_up_tick=245
+Thread B: tid=6, wake_up_tick=245
+Thread A: tid=4, wake_up_tick=245
+Thread B: tid=5, wake_up_tick=245
+Thread A: tid=4, wake_up_tick=245
+Thread B: tid=7, wake_up_tick=275
+Thread A: tid=6, wake_up_tick=285
+Thread B: tid=7, wake_up_tick=275
+Thread A: tid=6, wake_up_tick=285
+Thread B: tid=1, wake_up_tick=575
+Thread A: tid=5, wake_up_tick=275
+Thread B: tid=7, wake_up_tick=275
+Thread A: tid=5, wake_up_tick=275
+Thread B: tid=6, wake_up_tick=285
+Thread A: tid=4, wake_up_tick=265
+Thread B: tid=7, wake_up_tick=275
+Thread A: tid=7, wake_up_tick=325
+Thread B: tid=6, wake_up_tick=285
+Thread A: tid=7, wake_up_tick=325
+Thread B: tid=1, wake_up_tick=575
+Thread A: tid=5, wake_up_tick=305
+Thread B: tid=6, wake_up_tick=285
+Thread A: tid=5, wake_up_tick=305
+Thread B: tid=7, wake_up_tick=325
+Thread A: tid=6, wake_up_tick=325
+Thread B: tid=5, wake_up_tick=305
+Thread A: tid=6, wake_up_tick=325
+Thread B: tid=7, wake_up_tick=325
+Thread A: tid=6, wake_up_tick=325
+Thread B: tid=1, wake_up_tick=575
+Thread A: tid=5, wake_up_tick=335
+Thread B: tid=7, wake_up_tick=325
+Thread A: tid=5, wake_up_tick=335
+Thread B: tid=6, wake_up_tick=325
+Thread A: tid=5, wake_up_tick=335
+Thread B: tid=1, wake_up_tick=575
+Thread A: tid=7, wake_up_tick=375
+Thread B: tid=5, wake_up_tick=335
+Thread A: tid=7, wake_up_tick=375
+Thread B: tid=1, wake_up_tick=575
+Thread A: tid=6, wake_up_tick=365
+Thread B: tid=5, wake_up_tick=335
+Thread A: tid=6, wake_up_tick=365
+Thread B: tid=7, wake_up_tick=375
+Thread A: tid=6, wake_up_tick=405
+Thread B: tid=7, wake_up_tick=375
+Thread A: tid=6, wake_up_tick=405
+Thread B: tid=1, wake_up_tick=575
+Thread A: tid=7, wake_up_tick=425
+Thread B: tid=6, wake_up_tick=405
+Thread A: tid=7, wake_up_tick=425
+Thread B: tid=1, wake_up_tick=575
+Thread A: tid=7, wake_up_tick=475
+Thread B: tid=1, wake_up_tick=575
 (alarm-multiple) thread 0: duration=10, iteration=1, product=10
 (alarm-multiple) thread 1: duration=20, iteration=1, product=20
 (alarm-multiple) thread 0: duration=10, iteration=2, product=20
@@ -51,7 +229,7 @@ Executing 'alarm-multiple':
 (alarm-multiple) end
 Execution of 'alarm-multiple' complete.
 Timer: 581 ticks
-Thread: 550 idle ticks, 31 kernel ticks, 0 user ticks
-Console: 2995 characters output
+Thread: 546 idle ticks, 35 kernel ticks, 0 user ticks
+Console: 9047 characters output
 Keyboard: 0 keys pressed
 Powering off...
