@@ -101,8 +101,7 @@ struct list {
    of the list element.  See the big comment at the top of the
    file for an example. */
 #define list_entry(LIST_ELEM, STRUCT, MEMBER)           \
-	((STRUCT *) ((uint8_t *) &(LIST_ELEM)->next     \
-		- offsetof (STRUCT, MEMBER.next)))
+	((STRUCT *) ((uint8_t *) &(LIST_ELEM)->next - offsetof (STRUCT, MEMBER.next)))
 
 void list_init (struct list *);
 
