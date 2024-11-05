@@ -66,10 +66,14 @@ static tid_t allocate_tid (void);
 /* T가 유효한 스레드를 가리키는 것처럼 보이면 true를 반환합니다. */
 #define is_thread(t) ((t) != NULL && (t)->magic == THREAD_MAGIC)
 
-/* 실행 중인 스레드를 반환합니다.
-   CPU의 스택 포인터 `rsp`를 읽고 이를 페이지의 시작 위치로 반올림합니다.
-   `struct thread`는 항상 페이지의 시작에 위치하므로
-   현재 스레드를 찾는 데 사용할 수 있습니다. */
+/* 각 스레드는 독립적인 페이지에 위치 (스택은 다른 스레드와 공유되지 않고 고유한 페이지에 배정)
+	자신만의 페이지를 가짐
+	pg_round_down으로 스택 포인터가 페이지 내 어디를 가리키든 페이지의 시작 주소 얻을 수 있음
+	각 스레드가 독립적인 페이지에 배정되기 때문에 스레드마다 스택 포인터가 가르키는 주소가 다르더라도
+	각 스레드의 페이지 시작 주소를 안전하게 찾을 수 있음
+	CPU의 스택 포인터 `rsp`를 읽고 이를 페이지의 시작 위치 반환
+	`struct thread`는 항상 페이지의 시작에 위치
+   현재 스레드를 찾는 데 사용할 수 있음. */
 #define running_thread() ((struct thread *) (pg_round_down (rrsp ())))
 
 
@@ -415,67 +419,159 @@ do_iret (struct intr_frame *tf) {
 			: : "g" ((uint64_t) tf) : "memory");
 }
 
-/* 새로운 스레드의 페이지 테이블을 활성화하고, 이전 스레드가 죽어가는 중이라면 이를 파괴하여 스레드를 전환합니다.
 
-   이 함수가 호출될 때, PREV 스레드에서 전환되었으며, 새 스레드가 이미 실행 중이고 인터럽트는 여전히 비활성화된 상태입니다.
-   스레드 전환이 완료되기 전까지는 printf를 호출하는 것이 안전하지 않습니다.
-   실제로 printf는 이 함수의 끝 부분에서 호출하는 것이 안전합니다. */
+
+
+
+/* thread_launch 함수 스위칭 로직 어셈블리어 형태로 변환
+     ; 현재 사용 중인 레지스터 값을 스택에 저장하여 보존
+            push rax                 ; rax (일반적으로 함수 반환값을 저장하는 레지스터), 스택에 임시로 저장
+            push rbx                 ; rbx (베이스 레지스터로 사용되는 레지스터), 스택에 임시로 저장
+            push rcx                 ; rcx (루프 카운터나 임시 데이터 저장에 사용되는 레지스터), 스택에 임시로 저장
+
+    ; 현재 스레드의 tf 주소를 rax에 로드, 전환할 스레드의 tf 주소를 rcx에 로드
+            mov rax, [tf_cur]        ; 현재 스레드의 tf (intr_frame) 구조체 주소를 rax에 로드
+            mov rcx, [tf]            ; 전환할 스레드의 tf (intr_frame) 구조체 주소를 rcx에 로드
+
+    ; 현재 스레드의 레지스터 값을 tf_cur에 순서대로 저장
+
+			(r12, r13, r14, r15: 임시 데이터 저장에 사용)
+            mov [rax + 0], r15       ; r15 레지스터 값을 현재 스레드의 intr_frame 구조체의 첫 번째 위치에 저장
+            mov [rax + 8], r14       ; r14 레지스터 값을 현재 스레드의 intr_frame 구조체의 두 번째 위치에 저장
+            mov [rax + 16], r13      ; r13 레지스터 값을 현재 스레드의 intr_frame 구조체의 세 번째 위치에 저장
+            mov [rax + 24], r12      ; r12 레지스터 값을 현재 스레드의 intr_frame 구조체의 네 번째 위치에 저장
+
+			(r8, r9, r10, r11: 주로 함수 호출 시 추가 매개변수 전달에 사용)
+            mov [rax + 32], r11      ; r11 레지스터 값을 현재 스레드의 intr_frame 구조체의 다섯 번째 위치에 저장
+            mov [rax + 40], r10      ; r10 레지스터 값을 현재 스레드의 intr_frame 구조체의 여섯 번째 위치에 저장
+            mov [rax + 48], r9       ; r9 레지스터 값을 현재 스레드의 intr_frame 구조체의 일곱 번째 위치에 저장
+            mov [rax + 56], r8       ; r8 레지스터 값을 현재 스레드의 intr_frame 구조체의 여덟 번째 위치에 저장
+
+			(rsi, rdi: 함수 호출 시 첫 번째와 두 번째 매개변수 전달)
+            mov [rax + 64], rsi      ; rsi 레지스터 값을 현재 스레드의 intr_frame 구조체에 저장
+            mov [rax + 72], rdi      ; rdi 레지스터 값을 현재 스레드의 intr_frame 구조체에 저장
+
+			(rbp: 베이스 포인터, 함수 호출 시 스택 프레임을 관리)
+            mov [rax + 80], rbp      ; rbp 레지스터 값을 현재 스레드의 intr_frame 구조체에 저장
+
+			(rdx: 함수 호출 시 세 번째 매개변수 전달)
+            mov [rax + 88], rdx      ; rdx 레지스터 값을 현재 스레드의 intr_frame 구조체에 저장
+
+
+    ; 스택에서 rcx, rbx, rax를 복구하여 현재 스레드의 intr_frame에 저장
+
+			(rbx: 베이스 레지스터. 일반적으로 임시 저장 및 베이스 포인터로 사용)
+
+            pop rbx                  ; 스택에서 rcx 값을 복구하여 rbx에 저장 (임시로 저장)
+            mov [rax + 96], rbx      ; 복구한 rcx 값을 현재 스레드의 intr_frame 구조체에 저장
+
+            pop rbx                  ; 스택에서 rbx 값을 복구하여 rbx에 저장 (베이스 레지스터 복구)
+            mov [rax + 104], rbx     ; rbx 값을 현재 스레드의 intr_frame 구조체에 저장
+
+            pop rbx                  ; 스택에서 rax 값을 복구하여 rbx에 저장 (함수 반환값 복구)
+            mov [rax + 112], rbx     ; rax 값을 현재 스레드의 intr_frame 구조체에 저장
+
+    ; tf_cur의 다음 위치로 이동
+            add rax, 120             ; 레지스터 값이 모두 저장된 후 tf_cur의 다음 위치로 rax를 이동
+
+    ; 세그먼트 레지스터를 intr_frame에 저장 (해당 부분은 2바이트만으로 충분)
+            mov es, [rax]            ; es 세그먼트 값을 현재 스레드의 intr_frame 구조체에 저장
+            mov ds, [rax + 8]        ; ds 세그먼트 값을 현재 스레드의 intr_frame 구조체에 저장
+
+    ; tf_cur에서 다음 위치로 이동하여 레지스터 저장 위치를 건너뜀 (32바이트는 구조체의 데이터 정렬과 필드 간 구분 명확히 하기 위해 선택된 간격)
+            add rax, 32              
+
+    ; 현재 실행 위치를 설정하기 위한 준비
+    __next:
+            call __next              ; 현재 RIP 위치를 스택에 저장하고 __next 레이블로 이동
+            pop rbx                  ; 스택에서 RIP 값을 복구하여 rbx에 저장
+            add rbx, (out_iret - __next) ; RIP에 필요한 오프셋을 더함
+
+    ; 복구한 RIP와 세그먼트 값을 현재 스레드의 intr_frame에 저장
+            mov [rax], rbx           ; 복구한 RIP 값을 현재 스레드의 intr_frame 구조체에 저장
+            mov cs, [rax + 8]        ; 현재 CS (코드 세그먼트) 값을 현재 스레드의 intr_frame 구조체에 저장
+
+    ; 플래그 레지스터와 스택 포인터 값을 현재 스레드의 intr_frame에 저장
+            pushfq                   ; 플래그 레지스터를 스택에 저장
+            pop rbx                  ; 스택에서 플래그 값을 rbx로 복구
+            mov [rax + 16], rbx      ; 플래그 값을 현재 스레드의 intr_frame 구조체에 저장
+
+            mov rsp, [rax + 24]      ; 현재 스택 포인터를 현재 스레드의 intr_frame 구조체에 저장
+            mov ss, [rax + 32]       ; 현재 스택 세그먼트를 현재 스레드의 intr_frame 구조체에 저장
+
+    ; 전환할 스레드의 tf 주소를 rdi에 전달하고 do_iret 호출
+            mov rdi, rcx             ; 전환할 스레드의 intr_frame 구조체 주소를 rdi에 전달 (do_iret 호출 시 인자로 전달)
+            call do_iret             ; do_iret을 호출하여 다음 스레드로 전환
+    out_iret:
+
+
+*/
+
 static void
 thread_launch (struct thread *th) {
-	uint64_t tf_cur = (uint64_t) &running_thread ()->tf;
-	uint64_t tf = (uint64_t) &th->tf;
-	ASSERT (intr_get_level () == INTR_OFF);
+    uint64_t tf_cur = (uint64_t) &running_thread ()->tf;  // 현재 스레드의 intr_frame 주소를 tf_cur에 저장
+    uint64_t tf = (uint64_t) &th->tf;  // 전환할 스레드 th의 intr_frame 주소를 tf에 저장
+    ASSERT (intr_get_level () == INTR_OFF);  // 인터럽트가 비활성화된 상태인지 확인
 
-	/* 주 스위칭 로직.
-	   intr_frame에 전체 실행 컨텍스트를 복원한 후 do_iret를 호출하여 다음 스레드로 전환합니다.
-	   주의: 스위칭이 완료될 때까지 스택을 사용하지 말아야 합니다. */
-	__asm __volatile (
-			/* 사용할 레지스터 저장. */
-			"push %%rax\n"
-			"push %%rbx\n"
-			"push %%rcx\n"
-			/* 한 번만 입력 가져오기 */
-			"movq %0, %%rax\n"
-			"movq %1, %%rcx\n"
-			"movq %%r15, 0(%%rax)\n"
-			"movq %%r14, 8(%%rax)\n"
-			"movq %%r13, 16(%%rax)\n"
-			"movq %%r12, 24(%%rax)\n"
-			"movq %%r11, 32(%%rax)\n"
-			"movq %%r10, 40(%%rax)\n"
-			"movq %%r9, 48(%%rax)\n"
-			"movq %%r8, 56(%%rax)\n"
-			"movq %%rsi, 64(%%rax)\n"
-			"movq %%rdi, 72(%%rax)\n"
-			"movq %%rbp, 80(%%rax)\n"
-			"movq %%rdx, 88(%%rax)\n"
-			"pop %%rbx\n"              // 저장된 rcx
-			"movq %%rbx, 96(%%rax)\n"
-			"pop %%rbx\n"              // 저장된 rbx
-			"movq %%rbx, 104(%%rax)\n"
-			"pop %%rbx\n"              // 저장된 rax
-			"movq %%rbx, 112(%%rax)\n"
-			"addq $120, %%rax\n"
-			"movw %%es, (%%rax)\n"
-			"movw %%ds, 8(%%rax)\n"
-			"addq $32, %%rax\n"
-			"call __next\n"         // 현재 rip 읽기
-			"__next:\n"
-			"pop %%rbx\n"
-			"addq $(out_iret -  __next), %%rbx\n"
-			"movq %%rbx, 0(%%rax)\n" // rip
-			"movw %%cs, 8(%%rax)\n"  // cs
-			"pushfq\n"
-			"popq %%rbx\n"
-			"mov %%rbx, 16(%%rax)\n" // eflags
-			"mov %%rsp, 24(%%rax)\n" // rsp
-			"movw %%ss, 32(%%rax)\n"
-			"mov %%rcx, %%rdi\n"
-			"call do_iret\n"
-			"out_iret:\n"
-			: : "g"(tf_cur), "g" (tf) : "memory"
-			);
+    /* 주 스위칭 로직.
+       intr_frame에 전체 실행 컨텍스트를 복원한 후 do_iret를 호출하여 다음 스레드로 전환합니다.
+       주의: 스위칭이 완료될 때까지 스택을 사용하지 말아야 합니다. */
+    __asm __volatile (
+            /* 사용할 레지스터 저장. */
+            "push %%rax\n"  // rax 레지스터 값을 스택에 저장
+            "push %%rbx\n"  // rbx 레지스터 값을 스택에 저장
+            "push %%rcx\n"  // rcx 레지스터 값을 스택에 저장
+            /* 한 번만 입력 가져오기 */
+			// "g"(tf_cur), "g" (tf) : "memory"에 의해 tf_cur과 tf 정해짐
+            "movq %0, %%rax\n"  // tf_cur 값을 rax에 로드 (현재 스레드의 tf 주소)
+            "movq %1, %%rcx\n"  // tf 값을 rcx에 로드 (전환할 스레드의 tf 주소)
+            /* 현재 스레드의 레지스터 상태를 tf_cur에 저장 */
+            "movq %%r15, 0(%%rax)\n"   // r15 레지스터 값을 tf_cur의 첫 번째 위치에 저장
+            "movq %%r14, 8(%%rax)\n"   // r14 레지스터 값을 tf_cur의 두 번째 위치에 저장
+            "movq %%r13, 16(%%rax)\n"  // r13 레지스터 값을 tf_cur의 세 번째 위치에 저장
+            "movq %%r12, 24(%%rax)\n"  // r12 레지스터 값을 tf_cur의 네 번째 위치에 저장
+            "movq %%r11, 32(%%rax)\n"  // r11 레지스터 값을 tf_cur의 다섯 번째 위치에 저장
+            "movq %%r10, 40(%%rax)\n"  // r10 레지스터 값을 tf_cur의 여섯 번째 위치에 저장
+            "movq %%r9, 48(%%rax)\n"   // r9 레지스터 값을 tf_cur의 일곱 번째 위치에 저장
+            "movq %%r8, 56(%%rax)\n"   // r8 레지스터 값을 tf_cur의 여덟 번째 위치에 저장
+            "movq %%rsi, 64(%%rax)\n"  // rsi 레지스터 값을 tf_cur에 저장
+            "movq %%rdi, 72(%%rax)\n"  // rdi 레지스터 값을 tf_cur에 저장
+            "movq %%rbp, 80(%%rax)\n"  // rbp 레지스터 값을 tf_cur에 저장
+            "movq %%rdx, 88(%%rax)\n"  // rdx 레지스터 값을 tf_cur에 저장
+            "pop %%rbx\n"              // 스택에서 저장해둔 rcx 값을 rbx로 복구
+            "movq %%rbx, 96(%%rax)\n"  // rcx 값을 tf_cur에 저장
+            "pop %%rbx\n"              // 스택에서 저장해둔 rbx 값을 rbx로 복구
+            "movq %%rbx, 104(%%rax)\n" // rbx 값을 tf_cur에 저장
+            "pop %%rbx\n"              // 스택에서 저장해둔 rax 값을 rbx로 복구
+            "movq %%rbx, 112(%%rax)\n" // rax 값을 tf_cur에 저장
+            "addq $120, %%rax\n"       // tf_cur의 다음 위치로 rax 값을 이동 (레지스터 저장 후 다음 공간)
+            "movw %%es, (%%rax)\n"     // 현재 es 세그먼트 레지스터를 tf_cur에 저장 , w는 2바이트 크기 데이터 이동 (q는 8바이트 이동)
+            "movw %%ds, 8(%%rax)\n"    // 현재 ds 세그먼트 레지스터를 tf_cur에 저장
+            "addq $32, %%rax\n"        // tf_cur의 다음 위치로 이동
+
+            /* 다음 실행 위치 설정 */
+            "call __next\n"            // 현재 rip(명령어 포인터)를 스택에 저장한 후 __next로 이동
+            "__next:\n"
+            "pop %%rbx\n"              // 스택에서 rip 값을 가져와 rbx에 저장
+            "addq $(out_iret - __next), %%rbx\n"  // out_iret까지의 오프셋을 rbx에 더함
+            "movq %%rbx, 0(%%rax)\n"   // rip 값을 tf_cur에 저장 (다음 실행 위치)
+            "movw %%cs, 8(%%rax)\n"    // 현재 cs 세그먼트를 tf_cur에 저장 (코드 세그먼트)
+            "pushfq\n"                 // 플래그 레지스터를 스택에 저장
+            "popq %%rbx\n"             // 스택에서 플래그 값을 rbx로 복구
+            "mov %%rbx, 16(%%rax)\n"   // 플래그 값을 tf_cur에 저장 (eflags)
+            "mov %%rsp, 24(%%rax)\n"   // 현재 스택 포인터 값을 tf_cur에 저장 (rsp)
+            "movw %%ss, 32(%%rax)\n"   // 현재 스택 세그먼트 값을 tf_cur에 저장 (ss)
+            
+            /* 전환할 스레드로의 문맥 복원 준비 */
+            "mov %%rcx, %%rdi\n"       // 전환할 스레드의 tf 주소를 rdi에 전달 (do_iret의 인자)
+            "call do_iret\n"           // do_iret 호출로 전환할 스레드의 실행 상태를 복원하고 실행 시작
+
+            "out_iret:\n"              // do_iret 이후 복귀 지점
+            : : "g"(tf_cur), "g" (tf) : "memory"
+    );
 }
+
+
 
 /* 새로운 프로세스를 스케줄링합니다.
    이 함수가 실행될 때는 인터럽트가 꺼져 있어야 합니다.
@@ -518,7 +614,8 @@ schedule (void) {
 
 	if (curr != next) {
 		/* 새로운 스레드(next)로 전환할 때 처리해야 할 몇 가지 중요한 작업을 수행
-		   스레드가 스택에서 page 해제가 완료될 때까지 큐에 파괴 요청을 남김.
+			스레드가 스스로를 종료할 때 직접 메모리를 해제하는 데 따른 위험
+		   다음 스케줄링 과정에서 안전하게 메모리를 해제할 수 있도록 처리
 		   실제 파괴 로직은 schedule()의 시작에서 호출됨 */
 		if (curr && curr->status == THREAD_DYING && curr != initial_thread) {
 			ASSERT (curr != next);
