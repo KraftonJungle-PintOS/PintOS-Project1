@@ -63,6 +63,8 @@ static void do_schedule(int status);
 static void schedule (void);
 static tid_t allocate_tid (void);
 
+bool thread_compare_priority (struct list_elem *l, struct list_elem *s, void *aux UNUSED);
+
 /* T가 유효한 스레드를 가리키는 것처럼 보이면 true를 반환합니다. */
 #define is_thread(t) ((t) != NULL && (t)->magic == THREAD_MAGIC)
 
@@ -193,6 +195,7 @@ thread_create (const char *name, int priority,
 
 	/* 실행 큐에 추가 */
 	thread_unblock (t);
+	thread_test_preemption ();
 
 	return tid;
 }
@@ -220,10 +223,17 @@ void thread_unblock (struct thread *t) {
     old_level = intr_disable (); // 인터럽트 비활성화
     ASSERT (t->status == THREAD_BLOCKED); // 스레드 상태가 BLOCKED인지 확인
 
-    list_push_back (&ready_list, &t->elem); // ready_list에 스레드 추가
+  	list_insert_ordered (&ready_list, &t->elem, thread_compare_priority, 0);
     t->status = THREAD_READY; // 스레드 상태를 READY로 변경
 
     intr_set_level (old_level); // 이전 인터럽트 레벨 복원
+}
+
+bool 
+thread_compare_priority (struct list_elem *l, struct list_elem *s, void *aux UNUSED)
+{
+    return list_entry (l, struct thread, elem)->priority
+         > list_entry (s, struct thread, elem)->priority;
 }
 
 
@@ -284,15 +294,30 @@ thread_yield (void) {
 
 	old_level = intr_disable ();
 	if (curr != idle_thread)
-		list_push_back (&ready_list, &curr->elem);
+	    list_insert_ordered (&ready_list, &curr->elem, thread_compare_priority, 0);
 	do_schedule (THREAD_READY);
 	intr_set_level (old_level);
 }
+
+
+//**************************************************************************
+// 추가된 내용
+void 
+thread_test_preemption (void)
+{
+    if (!list_empty (&ready_list) && 
+    thread_current ()->priority < 
+    list_entry (list_front (&ready_list), struct thread, elem)->priority)
+        thread_yield ();
+}
+
+//**************************************************************************
 
 /* 현재 스레드의 우선 순위를 NEW_PRIORITY로 설정합니다. */
 void
 thread_set_priority (int new_priority) {
 	thread_current ()->priority = new_priority;
+	thread_test_preemption ();
 }
 
 /* 현재 스레드의 우선 순위를 반환합니다. */
