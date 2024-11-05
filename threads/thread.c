@@ -142,6 +142,8 @@ thread_tick (void) {
 
 	/* 선점 적용 */
 	if (++thread_ticks >= TIME_SLICE)
+	// intr_yield_on_return 함수는 직접적으로 CPU 자원은 다른 스레드에게 할당 X
+	// 다음 시점에서 스케중링이 이뤄지도록 요청 (현재 인터럽트 핸들러 종료 후 양보될 것 표시)
 		intr_yield_on_return ();
 }
 
@@ -206,18 +208,20 @@ thread_block (void) {
 /* 차단된 스레드 T를 실행 준비 상태로 전환합니다.
    T가 차단되지 않았다면 오류입니다.
    현재 실행 중인 스레드를 선점하지 않습니다. */
-void
-thread_unblock (struct thread *t) {
-	enum intr_level old_level;
+void thread_unblock (struct thread *t) {
+    enum intr_level old_level;
 
-	ASSERT (is_thread (t));
+    ASSERT (is_thread (t)); // t가 유효한 스레드인지 확인
 
-	old_level = intr_disable ();
-	ASSERT (t->status == THREAD_BLOCKED);
-	list_push_back (&ready_list, &t->elem);
-	t->status = THREAD_READY;
-	intr_set_level (old_level);
+    old_level = intr_disable (); // 인터럽트 비활성화
+    ASSERT (t->status == THREAD_BLOCKED); // 스레드 상태가 BLOCKED인지 확인
+
+    list_push_back (&ready_list, &t->elem); // ready_list에 스레드 추가
+    t->status = THREAD_READY; // 스레드 상태를 READY로 변경
+
+    intr_set_level (old_level); // 이전 인터럽트 레벨 복원
 }
+
 
 /* 실행 중인 스레드의 이름을 반환합니다. */
 const char *
@@ -477,18 +481,20 @@ thread_launch (struct thread *th) {
    이 함수가 실행될 때는 인터럽트가 꺼져 있어야 합니다.
    이 함수는 현재 스레드의 상태를 status로 변경한 후 실행할 다른 스레드를 찾아 스위칭합니다.
    schedule() 함수 내에서는 printf() 호출이 안전하지 않습니다. */
-static void
-do_schedule(int status) {
-	ASSERT (intr_get_level () == INTR_OFF);
-	ASSERT (thread_current()->status == THREAD_RUNNING);
-	while (!list_empty (&destruction_req)) {
-		struct thread *victim =
-			list_entry (list_pop_front (&destruction_req), struct thread, elem);
-		palloc_free_page(victim);  // 파괴 요청 목록에서 제거된 스레드의 페이지 해제
-	}
-	thread_current ()->status = status;
-	schedule ();
+static void do_schedule(int status) {
+    ASSERT (intr_get_level () == INTR_OFF);  // 인터럽트가 비활성화 상태인지 확인
+    ASSERT (thread_current()->status == THREAD_RUNNING);  // 현재 스레드가 실행 중인지 확인
+
+    while (!list_empty(&destruction_req)) {  // 파괴 요청 리스트가 비어있지 않다면 반복
+        struct thread *victim =
+            list_entry(list_pop_front(&destruction_req), struct thread, elem);
+        palloc_free_page(victim);  // 파괴된 스레드의 메모리 페이지를 해제
+    }
+
+    thread_current()->status = status;  // 현재 스레드의 상태를 인자로 전달된 상태로 설정
+    schedule();  // 스케줄러를 호출하여 다음 스레드로 전환
 }
+
 
 static void
 schedule (void) {
@@ -511,7 +517,7 @@ schedule (void) {
 #endif
 
 	if (curr != next) {
-		/* 전환된 스레드가 죽어가는 상태라면, struct thread 파괴
+		/* 새로운 스레드(next)로 전환할 때 처리해야 할 몇 가지 중요한 작업을 수행
 		   스레드가 스택에서 page 해제가 완료될 때까지 큐에 파괴 요청을 남김.
 		   실제 파괴 로직은 schedule()의 시작에서 호출됨 */
 		if (curr && curr->status == THREAD_DYING && curr != initial_thread) {
@@ -519,7 +525,9 @@ schedule (void) {
 			list_push_back (&destruction_req, &curr->elem);
 		}
 
-		/* 스레드 전환 전에 현재 실행 상태 정보를 저장 */
+		/* 스레드 전환 전에 현재 실행 상태 정보를 저장 
+		CPU 문맥 전환 작업으로 스겔드 중단된 시점의 상태 저장 
+		다음에 실행한 next 문맥을 복원하여 실행 이어감 */
 		thread_launch (next);
 	}
 }

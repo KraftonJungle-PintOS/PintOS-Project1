@@ -252,6 +252,7 @@ intr_context (void) {
 void
 intr_yield_on_return (void) {
 	ASSERT (intr_context ());
+	// yield_on_return는 플래그 중 하나로 스케줄링과 CPU 양보를 요청
 	yield_on_return = true;
 }
 
