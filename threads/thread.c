@@ -229,8 +229,7 @@ void thread_unblock (struct thread *t) {
     intr_set_level (old_level); // 이전 인터럽트 레벨 복원
 }
 
-bool 
-thread_compare_priority (struct list_elem *l, struct list_elem *s, void *aux UNUSED)
+bool thread_compare_priority (struct list_elem *l, struct list_elem *s, void *aux UNUSED)
 {
     return list_entry (l, struct thread, elem)->priority
          > list_entry (s, struct thread, elem)->priority;
@@ -302,8 +301,7 @@ thread_yield (void) {
 
 //**************************************************************************
 // 추가된 내용
-void 
-thread_test_preemption (void)
+void thread_test_preemption (void)
 {
     if (!list_empty (&ready_list) && 
     thread_current ()->priority < 
