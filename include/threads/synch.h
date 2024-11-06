@@ -10,6 +10,11 @@ struct semaphore {
 	struct list waiters;        /* List of waiting threads. */
 };
 
+struct semaphore_elem {
+    struct list_elem elem;           // 리스트에 넣을 때 사용할 요소
+    struct semaphore semaphore;       // 세마포어 객체
+};
+
 void sema_init (struct semaphore *, unsigned value);
 void sema_down (struct semaphore *);
 bool sema_try_down (struct semaphore *);

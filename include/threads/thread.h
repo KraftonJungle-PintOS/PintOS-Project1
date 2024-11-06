@@ -98,6 +98,11 @@ struct thread {
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
+    int init_priority;
+    struct lock *wait_on_lock;
+    struct list donations;
+    struct list_elem donation_elem;
+
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint64_t *pml4;                     /* Page map level 4 */
@@ -148,5 +153,8 @@ void do_iret (struct intr_frame *tf);
 
 // 비교 함수 선언
 bool cmp_wake_up_ticks(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
+bool thread_compare_priority (struct list_elem *l, struct list_elem *s, void *aux UNUSED);
+bool thread_compare_donate_priority (const struct list_elem *l, const struct list_elem *s, void *aux UNUSED);
+
 
 #endif /* threads/thread.h */
