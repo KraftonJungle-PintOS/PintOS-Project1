@@ -65,6 +65,7 @@ static tid_t allocate_tid (void);
 
 bool thread_compare_priority (struct list_elem *l, struct list_elem *s, void *aux UNUSED);
 
+
 /* T가 유효한 스레드를 가리키는 것처럼 보이면 true를 반환합니다. */
 #define is_thread(t) ((t) != NULL && (t)->magic == THREAD_MAGIC)
 
@@ -218,21 +219,21 @@ thread_block (void) {
 void thread_unblock (struct thread *t) {
     enum intr_level old_level;
 
-    ASSERT (is_thread (t)); // t가 유효한 스레드인지 확인
+    ASSERT (is_thread (t));
 
-    old_level = intr_disable (); // 인터럽트 비활성화
-    ASSERT (t->status == THREAD_BLOCKED); // 스레드 상태가 BLOCKED인지 확인
+    old_level = intr_disable ();
+    ASSERT (t->status == THREAD_BLOCKED);
 
-  	list_insert_ordered (&ready_list, &t->elem, thread_compare_priority, 0);
-    t->status = THREAD_READY; // 스레드 상태를 READY로 변경
+    list_insert_ordered(&ready_list, &t->elem, thread_compare_priority, NULL);
+    t->status = THREAD_READY;
 
-    intr_set_level (old_level); // 이전 인터럽트 레벨 복원
+    intr_set_level (old_level);
 }
 
 bool thread_compare_priority (struct list_elem *l, struct list_elem *s, void *aux UNUSED)
-{
-    return list_entry (l, struct thread, elem)->priority
-         > list_entry (s, struct thread, elem)->priority;
+{	struct thread* a =  list_entry (l, struct thread, elem);
+	struct thread* b =  list_entry (s, struct thread, elem);
+    return a->priority> b->priority;
 }
 
 
@@ -309,13 +310,75 @@ void thread_test_preemption (void)
         thread_yield ();
 }
 
+bool
+thread_compare_donate_priority (const struct list_elem *l, 
+				const struct list_elem *s, void *aux UNUSED)
+{
+	return list_entry (l, struct thread, donation_elem)->priority
+		 > list_entry (s, struct thread, donation_elem)->priority;
+}
+
+void
+donate_priority (void)
+{
+   struct thread *cur = thread_current();
+    int depth;
+
+    for (depth = 0; depth < 8; depth++) {
+        if (!cur->wait_on_lock)
+            break;
+
+        struct thread *holder = cur->wait_on_lock->holder;
+        if (holder->priority >= cur->priority)  // 이미 높은 우선순위를 가진 경우 중단
+            break;
+
+        holder->priority = cur->priority;
+        cur = holder;
+    }
+}
+
+
+void
+remove_with_lock (struct lock *lock)
+{
+  struct list_elem *e;
+  struct thread *cur = thread_current ();
+
+  for (e = list_begin (&cur->donations); e != list_end (&cur->donations); e = list_next (e)){
+    struct thread *t = list_entry (e, struct thread, donation_elem);
+    if (t->wait_on_lock == lock)
+      list_remove (&t->donation_elem);
+  }
+}
+
+void refresh_priority(void) {
+    struct thread *cur = thread_current();
+    cur->priority = cur->init_priority;
+
+    if (!list_empty(&cur->donations)) {
+        list_sort(&cur->donations, thread_compare_donate_priority, NULL);
+        struct thread *highest = list_entry(list_front(&cur->donations), struct thread, donation_elem);
+        if (highest->priority > cur->priority)
+            cur->priority = highest->priority;
+    }
+}
+
+
 //**************************************************************************
 
 /* 현재 스레드의 우선 순위를 NEW_PRIORITY로 설정합니다. */
 void
 thread_set_priority (int new_priority) {
-	thread_current ()->priority = new_priority;
-	thread_test_preemption ();
+	struct thread *cur = thread_current ();
+    cur->init_priority = new_priority;
+    
+    refresh_priority ();  // 우선순위를 갱신하여 기부된 우선순위와 비교
+
+    // 현재 스레드의 우선순위가 준비 리스트의 다른 스레드보다 낮아진 경우 양보
+    if (!list_empty(&ready_list) &&
+        list_entry(list_front(&ready_list), struct thread, elem)->priority > cur->priority) {
+        thread_yield();
+    }
 }
 
 /* 현재 스레드의 우선 순위를 반환합니다. */
@@ -400,6 +463,10 @@ init_thread (struct thread *t, const char *name, int priority) {
 	t->tf.rsp = (uint64_t) t + PGSIZE - sizeof (void *);
 	t->priority = priority;
 	t->magic = THREAD_MAGIC;
+
+	t->init_priority = priority;
+  	t->wait_on_lock = NULL;
+  	list_init (&t->donations);	
 }
 
 /* 스케줄링할 다음 스레드를 선택하여 반환합니다.
@@ -441,8 +508,6 @@ do_iret (struct intr_frame *tf) {
 			"iretq"
 			: : "g" ((uint64_t) tf) : "memory");
 }
-
-
 
 
 
