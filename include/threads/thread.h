@@ -91,7 +91,11 @@ struct thread
 	tid_t tid;				   /* Thread identifier. */
 	enum thread_status status; /* Thread state. */
 	char name[16];			   /* Name (for debugging purposes). */
+
+	int64_t wakeup;
+
 	int priority;			   /* Priority. */
+	
 
 	int init_priority;				// 스레드의 원래 우선순위 저장
 	struct list donations;			// 이 스레드에게 우선순위를 기부한 스레드들의 리스트
@@ -100,6 +104,8 @@ struct thread
 
 	/* Shared between thread.c and synch.c. */
 	struct list_elem elem; /* List element. */
+
+	struct list_elem allelem; /* List element. */
 
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */
@@ -150,6 +156,9 @@ int thread_get_load_avg(void);
 void do_iret(struct intr_frame *tf);
 
 // custom
+void thread_sleep(int64_t ticks);
+void thread_awake(int64_t ticks);
+
 bool thread_priority_compare(const struct list_elem *a, const struct list_elem *b, void *aux);
 bool thread_compare_donate_priority(const struct list_elem *l, const struct list_elem *s, void *aux UNUSED);
 void donate_priority(void);
