@@ -28,6 +28,10 @@ typedef int tid_t;
 #define PRI_DEFAULT 31 /* Default priority. */
 #define PRI_MAX 63	   /* Highest priority. */
 
+#define NICE_DEFAULT 0
+#define RECENT_CPU_DEFAULT 0
+#define LOAD_AVG_DEFAULT 0
+
 /* A kernel thread or user process.
  *
  * Each thread structure is stored in its own 4 kB page.  The
@@ -94,13 +98,15 @@ struct thread
 
 	int64_t wakeup;
 
-	int priority;			   /* Priority. */
-	
+	int priority; /* Priority. */
 
 	int init_priority;				// 스레드의 원래 우선순위 저장
 	struct list donations;			// 이 스레드에게 우선순위를 기부한 스레드들의 리스트
 	struct list_elem donation_elem; // donations 리스트에 사용될 리스트 요소
 	struct lock *wait_on_lock;		// 스레드가 현재 대기 중인 lock의 주소
+
+	int nice;
+	int recent_cpu;
 
 	/* Shared between thread.c and synch.c. */
 	struct list_elem elem; /* List element. */
