@@ -20,4 +20,12 @@ void timer_nsleep (int64_t nanoseconds);
 
 void timer_print_stats (void);
 
+/* sleep_thread 구조체 정의 */
+struct sleep_thread {
+    struct thread *t;  // 대기 중인 스레드
+    int64_t wake_up_time;  // 스레드가 깨어날 시점 (tick 단위)
+    struct list_elem elem;  // 리스트에 포함될 요소
+};
+
+
 #endif /* devices/timer.h */

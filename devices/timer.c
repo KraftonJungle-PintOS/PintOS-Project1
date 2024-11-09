@@ -29,6 +29,8 @@ static bool too_many_loops (unsigned loops);
 static void busy_wait (int64_t loops);
 static void real_time_sleep (int64_t num, int32_t denom);
 
+static struct list sleep_list;    // sleep_list: 대기 중인 스레드들
+
 /* Sets up the 8254 Programmable Interval Timer (PIT) to
    interrupt PIT_FREQ times per second, and registers the
    corresponding interrupt. */
@@ -43,6 +45,8 @@ timer_init (void) {
 	outb (0x43, 0x34);    /* CW: counter 0, LSB then MSB, mode 2, binary. */
 	outb (0x40, count & 0xff);
 	outb (0x40, count >> 8);
+
+	list_init (&sleep_list);
 
 	intr_register_ext (0x20, timer_interrupt, "8254 Timer");
 }
@@ -91,13 +95,34 @@ timer_elapsed (int64_t then) {
 
 /* Suspends execution for approximately TICKS timer ticks. */
 void
-timer_sleep (int64_t ticks) {
-	int64_t start = timer_ticks ();
+timer_sleep(int64_t ticks) {
+    int64_t start = timer_ticks(); // 현재 tick 저장
+    int64_t wake_up_time = start + ticks; // 깨어날 시간을 계산 , 
 
-	ASSERT (intr_get_level () == INTR_ON);
-	while (timer_elapsed (start) < ticks)
-		thread_yield ();
+    ASSERT(intr_get_level() == INTR_ON); // 인터럽트가 활성화되어야 함
+
+    // 현재 스레드를 sleep_list에 추가, 이방식은 기존의 스레드를 활용하지 않고, 별도의 슬립 스레드를 선언해서, 슬립 리스트 를 관리, 단 오버헤드가 증가할수 있음에 유의!
+    struct sleep_thread *st = malloc(sizeof(struct sleep_thread)); 
+    st->t = thread_current();
+    st->wake_up_time = wake_up_time;
+    
+    // sleep_list에 스레드 삽입 (wake_up_time 순으로 정렬)
+    list_insert_ordered(&sleep_list, &st->elem, compare_sleep_time, NULL);
+
+    // 현재 스레드를 BLOCKED 상태로 전환
+    thread_block();
 }
+
+void
+compare_sleep_time() {
+	/*
+	이 함수는 경우 에 따라 다르겠지만 timer_sleep 에서 호출 됬다면 아마 wake_up_time 순으로 정렬하는 로직 이 포함 되어야함.
+	*/
+
+
+
+}
+
 
 /* Suspends execution for approximately MS milliseconds. */
 void
@@ -122,7 +147,7 @@ void
 timer_print_stats (void) {
 	printf ("Timer: %"PRId64" ticks\n", timer_ticks ());
 }
-
+
 /* Timer interrupt handler. */
 static void
 timer_interrupt (struct intr_frame *args UNUSED) {
