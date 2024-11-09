@@ -29,7 +29,6 @@ static bool too_many_loops (unsigned loops);
 static void busy_wait (int64_t loops);
 static void real_time_sleep (int64_t num, int32_t denom);
 
-static struct list sleep_list;    // sleep_list: 대기 중인 스레드들
 
 /* Sets up the 8254 Programmable Interval Timer (PIT) to
    interrupt PIT_FREQ times per second, and registers the
@@ -45,8 +44,6 @@ timer_init (void) {
 	outb (0x43, 0x34);    /* CW: counter 0, LSB then MSB, mode 2, binary. */
 	outb (0x40, count & 0xff);
 	outb (0x40, count >> 8);
-
-	list_init (&sleep_list);
 
 	intr_register_ext (0x20, timer_interrupt, "8254 Timer");
 }
@@ -95,7 +92,6 @@ timer_elapsed (int64_t then) {
 
 /* Suspends execution for approximately TICKS timer ticks. */
 void
-
 timer_sleep(int64_t ticks) {
     int64_t start = timer_ticks(); // 현재 tick 저장
     int64_t wake_up_time = start + ticks; // 깨어날 시간을 계산
@@ -116,12 +112,10 @@ timer_sleep(int64_t ticks) {
 
 bool
 compare_sleep_time(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED) {
-    // a와 b는 각각 리스트 요소를 가리키는 포인터이므로, sleep_thread로 캐스팅하여 접근
-    struct sleep_thread *st_a = list_entry(a, struct sleep_thread, elem);
-    struct sleep_thread *st_b = list_entry(b, struct sleep_thread, elem);
+    struct thread *t1 = list_entry(a, struct thread, elem);
+    struct thread *t2 = list_entry(b, struct thread, elem);
 
-    // wake_up_time을 기준으로 비교 (오름차순 정렬)
-    return st_a->wake_up_time < st_b->wake_up_time;
+    return t1->wake_up_time < t2->wake_up_time; // 빨리 깨어나야 하는 스레드가 먼저 오도록 정렬
 }
 
 
@@ -168,13 +162,21 @@ check_sleeping_threads(void) {
         t = list_entry(e, struct thread, elem);
 
         if (t->wake_up_time <= timer_ticks()) {
-            // 스레드를 깨우고 슬립 리스트에서 제거 
+            // 스레드를 깨우고 슬립 리스트에서 제거
             thread_unblock(t);
             list_remove(e);
         }
     }
 }
 
+void
+thread_unblock (struct thread *t) {
+    ASSERT (is_thread (t));
+    ASSERT (t->status == THREAD_BLOCKED);
+
+    t->status = THREAD_READY;  // 블록 상태에서 준비 상태로 전환
+    list_insert_ordered(&ready_list, &t->elem, thread_priority_less, NULL);  // 우선순위에 맞게 READY 리스트에 삽입
+}
 
 /* Returns true if LOOPS iterations waits for more than one timer
    tick, otherwise false. */

@@ -29,6 +29,7 @@
 static struct list ready_list;
 
 // 대기 중인 스레드를 관리하는 리스트들
+static struct list sleep_list;
 
 static struct list blocked_list;  // blocked_list: 자원 대기 중인 스레드들
 
@@ -114,6 +115,7 @@ thread_init (void) {
 	list_init (&ready_list);
 	list_init (&destruction_req);
 	list_init (&blocked_list);
+	list_init (&sleep_list);
 
 
 	/* Set up a thread structure for the running thread. */
