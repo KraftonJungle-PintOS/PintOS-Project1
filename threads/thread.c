@@ -56,6 +56,7 @@ static long long user_ticks;    /* # of timer ticks in user programs. */
 /* Scheduling. */
 #define TIME_SLICE 4            /* # of timer ticks to give each thread. */
 static unsigned thread_ticks;   /* # of timer ticks since last yield. */
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
 
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
@@ -159,6 +160,40 @@ void thread_sleep(int64_t ticks)
 	update_next_tick_to_awake(ticks);
 	do_schedule(THREAD_BLOCKED);
 	intr_set_level(old_level);
+}
+
+
+void thread_awake(int64_t ticks)
+{
+	next_tick_to_awake = INT64_MAX;
+	struct list_elem *e= list_begin(&sleep_list);
+	struct thread *t;
+ 
+	for (e ; e != list_end(&sleep_list);)
+	{
+		t = list_entry(e, struct thread, elem);
+		if (t->wake_up_time <= ticks)
+		{
+			e = list_remove(&t->elem);
+			thread_unblock(t);
+		}
+		else
+		{
+			update_next_tick_to_awake(t->wake_up_time);
+			e = list_next(e);
+		}
+	}
+}
+
+/* ticks와 next_tick_to_awake를 비교하여 작은 값을 넣는다.*/
+void update_next_tick_to_awake(int64_t ticks)
+{
+	next_tick_to_awake = MIN(next_tick_to_awake, ticks);
+}
+
+int64_t get_next_tick_to_awake(void)
+ {
+	return next_tick_to_awake;
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
