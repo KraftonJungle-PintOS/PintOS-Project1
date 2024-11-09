@@ -112,7 +112,7 @@ timer_sleep(int64_t ticks) {
  
 	ASSERT (intr_get_level () == INTR_ON); //인터럽트 활성화
 	thread_sleep(start+ticks);//thread_sleep을 호출하여 실행 중인 스레드를 대기 상태로 바꾼다 .
-	
+
 }
 
 
@@ -146,10 +146,16 @@ timer_print_stats (void) {
 static void
 timer_interrupt (struct intr_frame *args UNUSED) {
 	ticks++;
-	check_sleeping_threads();
 	thread_tick ();
+	int64_t next_tick;
+	next_tick = get_next_tick_to_awake();
+	/*-------------------- Project1 -------------------------------------*/
+	if (ticks >= next_tick)
+	{
+		thread_awake(ticks);
+	}
+	/*-------------------- Project1 -------------------------------------*/
 }
-
 
 
 /* thread_priority_less: 스레드 우선순위를 비교하여 리스트에 삽입될 순서를 결정 */
