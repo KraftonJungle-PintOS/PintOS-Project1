@@ -168,7 +168,7 @@ check_sleeping_threads(void) {
         t = list_entry(e, struct thread, elem);
 
         if (t->wake_up_time <= timer_ticks()) {
-            // 스레드를 깨우고 슬립 리스트에서 제거
+            // 스레드를 깨우고 슬립 리스트에서 제거 
             thread_unblock(t);
             list_remove(e);
         }
