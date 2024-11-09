@@ -169,15 +169,6 @@ check_sleeping_threads(void) {
     }
 }
 
-void
-thread_unblock (struct thread *t) {
-    ASSERT (is_thread (t));
-    ASSERT (t->status == THREAD_BLOCKED);
-
-    t->status = THREAD_READY;  // 블록 상태에서 준비 상태로 전환
-    list_insert_ordered(&ready_list, &t->elem, thread_priority_less, NULL);  // 우선순위에 맞게 READY 리스트에 삽입
-}
-
 /* thread_priority_less: 스레드 우선순위를 비교하여 리스트에 삽입될 순서를 결정 */
 bool
 thread_priority_less(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED) {
