@@ -28,8 +28,6 @@ static intr_handler_func timer_interrupt;
 static bool too_many_loops (unsigned loops);
 static void busy_wait (int64_t loops);
 static void real_time_sleep (int64_t num, int32_t denom);
-bool compare_sleep_time(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
-
 
 /* Sets up the 8254 Programmable Interval Timer (PIT) to
    interrupt PIT_FREQ times per second, and registers the
@@ -105,8 +103,8 @@ timer_sleep(int64_t ticks) {
 
 	현재 돌아가고 
 	스레드의 wake_up_tick 설정 
-
-
+	
+	
 	*/
 
 	
@@ -145,28 +143,6 @@ timer_interrupt (struct intr_frame *args UNUSED) {
 	ticks++;
 	check_sleeping_threads();
 	thread_tick ();
-}
-
-void check_sleeping_threads(void) {
-    struct list_elem *e, *next;
-    struct thread *t;
-
-    // 슬립 리스트에서 대기 시간이 끝난 스레드를 찾아 깨우기
-    for (e = list_begin(&sleep_list); e != list_end(&sleep_list); e = next) {
-        next = list_next(e);  // 다음 요소를 미리 저장
-
-        t = list_entry(e, struct thread, elem);
-
-        if (t->wake_up_time <= timer_ticks()) {
-            // 스레드 상태가 THREAD_BLOCKED일 때만 깨운다
-            if (t->status == THREAD_BLOCKED) {
-                thread_unblock(t);
-            }
-
-            // 슬립 리스트에서 제거
-            list_remove(e);
-        }
-    }
 }
 
 

@@ -143,8 +143,13 @@ int thread_get_load_avg (void);
 
 void do_iret (struct intr_frame *tf);
 
-extern struct list sleep_list;
-extern struct list ready_list;
+
+/*-------------------------- project.1 -----------------------------*/
+ void thread_sleep(int64_t ticks);
+ void thread_awake(int64_t ticks);
+ void update_next_tick_to_awake(int64_t ticks);
+ int64_t get_next_tick_to_awake(void);
+ /*-------------------------- project.1 -----------------------------*/
 
 
 #endif /* threads/thread.h */

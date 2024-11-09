@@ -31,6 +31,9 @@ struct list ready_list;
 // 대기 중인 스레드를 관리하는 리스트들
 struct list sleep_list;
 
+// sleep_list에서 대기중인 스레드들의 wakeup_tick값 중 최소값을 저장
+static int64_t next_tick_to_awake;
+
 static struct list blocked_list;  // blocked_list: 자원 대기 중인 스레드들
 
 /* Idle thread. */
@@ -67,6 +70,16 @@ static void init_thread (struct thread *, const char *name, int priority);
 static void do_schedule(int status);
 static void schedule (void);
 static tid_t allocate_tid (void);
+
+
+/*------------------------------user code ---------------------------------------*/
+void thread_sleep(int64_t ticks);
+void thread_awake(int64_t ticks);
+void update_next_tick_to_awake(int64_t ticks);
+
+int64_t get_next_tick_to_awake(void);
+
+/*------------------------------user code ---------------------------------------*/
 
 /* Returns true if T appears to point to a valid thread. */
 #define is_thread(t) ((t) != NULL && (t)->magic == THREAD_MAGIC)
@@ -115,8 +128,12 @@ thread_init (void) {
 	list_init (&ready_list);
 	list_init (&destruction_req);
 	list_init (&blocked_list);
-	list_init (&sleep_list);
 
+	/*---------------user code---------------------*/
+	list_init (&sleep_list);
+	next_tick_to_awake = INT64_MAX;
+
+	/*---------------user code---------------------*/
 
 	/* Set up a thread structure for the running thread. */
 	initial_thread = running_thread ();
