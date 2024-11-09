@@ -178,6 +178,18 @@ thread_unblock (struct thread *t) {
     list_insert_ordered(&ready_list, &t->elem, thread_priority_less, NULL);  // 우선순위에 맞게 READY 리스트에 삽입
 }
 
+/* thread_priority_less: 스레드 우선순위를 비교하여 리스트에 삽입될 순서를 결정 */
+bool
+thread_priority_less(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED) {
+    /* a와 b는 list_elem 타입이므로, 이를 thread로 변환 */
+    struct thread *t_a = list_entry(a, struct thread, elem);
+    struct thread *t_b = list_entry(b, struct thread, elem);
+
+    /* 우선순위가 더 높은 스레드가 앞에 오도록 반환 */
+    return t_a->priority > t_b->priority;
+}
+
+
 /* Returns true if LOOPS iterations waits for more than one timer
    tick, otherwise false. */
 static bool
