@@ -28,6 +28,12 @@
    that are ready to run but not actually running. */
 static struct list ready_list;
 
+// 대기 중인 스레드를 관리하는 리스트들
+static struct list sleep_list;    // sleep_list: 대기 중인 스레드들
+
+
+static struct list blocked_list;  // blocked_list: 자원 대기 중인 스레드들
+
 /* Idle thread. */
 static struct thread *idle_thread;
 
@@ -109,6 +115,9 @@ thread_init (void) {
 	lock_init (&tid_lock);
 	list_init (&ready_list);
 	list_init (&destruction_req);
+	list_init (&sleep_list);
+	list_init (&blocked_list);
+
 
 	/* Set up a thread structure for the running thread. */
 	initial_thread = running_thread ();

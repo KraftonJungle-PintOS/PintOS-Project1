@@ -35,9 +35,11 @@ static void real_time_sleep (int64_t num, int32_t denom);
 void
 timer_init (void) {
 	/* 8254 input frequency divided by TIMER_FREQ, rounded to
-	   nearest. */
+	   nearest.
+	   타이머 인터럽트 초기화 함수  
+	*/
 	uint16_t count = (1193180 + TIMER_FREQ / 2) / TIMER_FREQ;
-
+	//
 	outb (0x43, 0x34);    /* CW: counter 0, LSB then MSB, mode 2, binary. */
 	outb (0x40, count & 0xff);
 	outb (0x40, count >> 8);
