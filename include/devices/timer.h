@@ -20,6 +20,4 @@ void timer_usleep (int64_t microseconds);
 void timer_nsleep (int64_t nanoseconds);
 void check_sleeping_threads(void);
 void timer_print_stats (void);
-void thread_unblock (struct thread *t);
-
 #endif /* devices/timer.h */

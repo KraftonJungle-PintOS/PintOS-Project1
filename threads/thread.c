@@ -26,10 +26,10 @@
 
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
-static struct list ready_list;
+struct list ready_list;
 
 // 대기 중인 스레드를 관리하는 리스트들
-static struct list sleep_list;
+struct list sleep_list;
 
 static struct list blocked_list;  // blocked_list: 자원 대기 중인 스레드들
 

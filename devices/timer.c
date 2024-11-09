@@ -28,6 +28,7 @@ static intr_handler_func timer_interrupt;
 static bool too_many_loops (unsigned loops);
 static void busy_wait (int64_t loops);
 static void real_time_sleep (int64_t num, int32_t denom);
+bool compare_sleep_time(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
 
 
 /* Sets up the 8254 Programmable Interval Timer (PIT) to
@@ -105,8 +106,15 @@ timer_sleep(int64_t ticks) {
     // sleep_list에 스레드를 wake_up_time 순으로 정렬해서 삽입
     list_insert_ordered(&sleep_list, &current_thread->elem, compare_sleep_time, NULL);
 
-    // 현재 스레드를 BLOCKED 상태로 전환
-    thread_block();
+    // Disable interrupts to safely block the thread
+    intr_disable();
+
+    while (timer_ticks() - start < ticks) {
+        thread_block(); // Block the current thread
+    }
+
+    // Restore interrupts after blocking
+    intr_restore();
 }
 
 
