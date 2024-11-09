@@ -114,7 +114,7 @@ timer_sleep(int64_t ticks) {
     }
 
     // Restore interrupts after blocking
-    intr_restore();
+    intr_enable();
 }
 
 
@@ -152,7 +152,7 @@ timer_print_stats (void) {
 	printf ("Timer: %"PRId64" ticks\n", timer_ticks ());
 }
 
-/* Timer interrupt handler. */
+/* Timer interrupt handler.  */
 static void
 timer_interrupt (struct intr_frame *args UNUSED) {
 	ticks++;
