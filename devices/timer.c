@@ -104,9 +104,14 @@ timer_sleep(int64_t ticks) {
 	현재 돌아가고 
 	스레드의 wake_up_tick 설정 
 	
-	
+
+
 	*/
 
+	int64_t start = timer_ticks (); //현재틱 받아오기
+ 
+	ASSERT (intr_get_level () == INTR_ON); //인터럽트 활성화
+	thread_sleep(start+ticks);//thread_sleep을 호출하여 실행 중인 스레드를 대기 상태로 바꾼다 .
 	
 }
 

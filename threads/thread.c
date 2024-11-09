@@ -142,6 +142,25 @@ thread_init (void) {
 	initial_thread->tid = allocate_tid ();
 }
 
+void thread_sleep(int64_t ticks)
+{
+	struct thread *curr = thread_current();
+	enum intr_level old_level;
+	ASSERT(!intr_context());
+	old_level = intr_disable();
+ 
+	curr->wake_up_time = ticks;
+ 
+	if (curr != idle_thread)
+	{
+		list_push_back(&sleep_list, &curr->elem);
+	}
+ 
+	update_next_tick_to_awake(ticks);
+	do_schedule(THREAD_BLOCKED);
+	intr_set_level(old_level);
+}
+
 /* Starts preemptive thread scheduling by enabling interrupts.
    Also creates the idle thread. */
 void
