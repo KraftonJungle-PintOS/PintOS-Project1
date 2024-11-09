@@ -105,7 +105,6 @@ timer_sleep(int64_t ticks) {
 	스레드의 wake_up_tick 설정 
 	
 
-
 	*/
 
 	int64_t start = timer_ticks (); //현재틱 받아오기
@@ -114,6 +113,8 @@ timer_sleep(int64_t ticks) {
 	thread_sleep(start+ticks);//thread_sleep을 호출하여 실행 중인 스레드를 대기 상태로 바꾼다 .
 
 }
+
+
 
 
 
@@ -155,18 +156,6 @@ timer_interrupt (struct intr_frame *args UNUSED) {
 		thread_awake(ticks);
 	}
 	/*-------------------- Project1 -------------------------------------*/
-}
-
-
-/* thread_priority_less: 스레드 우선순위를 비교하여 리스트에 삽입될 순서를 결정 */
-bool
-thread_priority_less(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED) {
-    /* a와 b는 list_elem 타입이므로, 이를 thread로 변환 */
-    struct thread *t_a = list_entry(a, struct thread, elem);
-    struct thread *t_b = list_entry(b, struct thread, elem);
-
-    /* 우선순위가 더 높은 스레드가 앞에 오도록 반환 */
-    return t_a->priority > t_b->priority;
 }
 
 
