@@ -94,37 +94,24 @@ timer_elapsed (int64_t then) {
 /* Suspends execution for approximately TICKS timer ticks. */
 void
 timer_sleep(int64_t ticks) {
-    int64_t start = timer_ticks(); // 현재 tick 저장
-    int64_t wake_up_time = start + ticks; // 깨어날 시간을 계산
+	/*
+	의사 코드 
 
-    ASSERT(intr_get_level() == INTR_ON); // 인터럽트가 활성화되어야 함
+	현재 타이머 틱 을 받아오기 
 
-    // 현재 스레드에 wake_up_time 설정
-    struct thread *current_thread = thread_current();
-    current_thread->wake_up_time = wake_up_time;
+	스레드가 꺠어나야할 시간 을 계산 
 
-    // sleep_list에 스레드를 wake_up_time 순으로 정렬해서 삽입
-    list_insert_ordered(&sleep_list, &current_thread->elem, compare_sleep_time, NULL);
+	인터럽트 활성화 
 
-    // Disable interrupts to safely block the thread
-    intr_disable();
+	현재 돌아가고 
+	스레드의 wake_up_tick 설정 
 
-    while (timer_ticks() - start < ticks) {
-        thread_block(); // Block the current thread
-    }
 
-    // Restore interrupts after blocking
-    intr_enable();
+	*/
+
+	
 }
 
-
-bool
-compare_sleep_time(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED) {
-    struct thread *t1 = list_entry(a, struct thread, elem);
-    struct thread *t2 = list_entry(b, struct thread, elem);
-
-    return t1->wake_up_time < t2->wake_up_time; // 빨리 깨어나야 하는 스레드가 먼저 오도록 정렬
-}
 
 
 
@@ -160,22 +147,29 @@ timer_interrupt (struct intr_frame *args UNUSED) {
 	thread_tick ();
 }
 
-void
-check_sleeping_threads(void) {
-    struct list_elem *e;
+void check_sleeping_threads(void) {
+    struct list_elem *e, *next;
     struct thread *t;
 
     // 슬립 리스트에서 대기 시간이 끝난 스레드를 찾아 깨우기
-    for (e = list_begin(&sleep_list); e != list_end(&sleep_list); e = list_next(e)) {
+    for (e = list_begin(&sleep_list); e != list_end(&sleep_list); e = next) {
+        next = list_next(e);  // 다음 요소를 미리 저장
+
         t = list_entry(e, struct thread, elem);
 
         if (t->wake_up_time <= timer_ticks()) {
-            // 스레드를 깨우고 슬립 리스트에서 제거
-            thread_unblock(t);
+            // 스레드 상태가 THREAD_BLOCKED일 때만 깨운다
+            if (t->status == THREAD_BLOCKED) {
+                thread_unblock(t);
+            }
+
+            // 슬립 리스트에서 제거
             list_remove(e);
         }
     }
 }
+
+
 
 /* thread_priority_less: 스레드 우선순위를 비교하여 리스트에 삽입될 순서를 결정 */
 bool

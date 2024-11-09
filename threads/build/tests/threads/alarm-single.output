@@ -13,11 +13,11 @@ Executing 'alarm-single':
 (alarm-single) thread 1 sleeps 20 ticks each time, and so on.
 (alarm-single) If successful, product of iteration count and
 (alarm-single) sleep duration will appear in nondescending order.
-Kernel PANIC at ../../lib/kernel/list.c:83 in list_next(): assertion `is_head(elem) || is_interior(elem)' failed.
-Call stack: 0x8004213397 0x8004213613 0x800420d0f3 0x800420d05d 0x8004208727 0x8004208b45 0x80042071b6.
+Kernel PANIC at ../../threads/thread.c:275 in thread_current(): assertion `t->status == THREAD_RUNNING' failed.
+Call stack: 0x80042133b6 0x8004206eed 0x8004206d06 0x800420cf1b 0x8004216d3f 0x8004216a04 0x80042167f2 0x8004206636 0x8004206783 0x8004206120.
 The `backtrace' program can make call stacks useful.
 Read "Backtraces" in the "Debugging Tools" chapter
 of the Pintos documentation for more information.
-Timer: 133 ticks
-Thread: 109 idle ticks, 23 kernel ticks, 0 user ticks
+Timer: 23 ticks
+Thread: 0 idle ticks, 23 kernel ticks, 0 user ticks
 Console: 1
