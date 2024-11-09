@@ -95,33 +95,35 @@ timer_elapsed (int64_t then) {
 
 /* Suspends execution for approximately TICKS timer ticks. */
 void
+
 timer_sleep(int64_t ticks) {
     int64_t start = timer_ticks(); // 현재 tick 저장
-    int64_t wake_up_time = start + ticks; // 깨어날 시간을 계산 , 
+    int64_t wake_up_time = start + ticks; // 깨어날 시간을 계산
 
     ASSERT(intr_get_level() == INTR_ON); // 인터럽트가 활성화되어야 함
 
-    // 현재 스레드를 sleep_list에 추가, 이방식은 기존의 스레드를 활용하지 않고, 별도의 슬립 스레드를 선언해서, 슬립 리스트 를 관리, 단 오버헤드가 증가할수 있음에 유의!
-    struct sleep_thread *st = malloc(sizeof(struct sleep_thread)); 
-    st->t = thread_current();
-    st->wake_up_time = wake_up_time;
-    
-    // sleep_list에 스레드 삽입 (wake_up_time 순으로 정렬)
-    list_insert_ordered(&sleep_list, &st->elem, compare_sleep_time, NULL);
+    // 현재 스레드에 wake_up_time 설정
+    struct thread *current_thread = thread_current();
+    current_thread->wake_up_time = wake_up_time;
+
+    // sleep_list에 스레드를 wake_up_time 순으로 정렬해서 삽입
+    list_insert_ordered(&sleep_list, &current_thread->elem, compare_sleep_time, NULL);
 
     // 현재 스레드를 BLOCKED 상태로 전환
     thread_block();
 }
 
-void
-compare_sleep_time() {
-	/*
-	이 함수는 경우 에 따라 다르겠지만 timer_sleep 에서 호출 됬다면 아마 wake_up_time 순으로 정렬하는 로직 이 포함 되어야함.
-	*/
 
+bool
+compare_sleep_time(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED) {
+    // a와 b는 각각 리스트 요소를 가리키는 포인터이므로, sleep_thread로 캐스팅하여 접근
+    struct sleep_thread *st_a = list_entry(a, struct sleep_thread, elem);
+    struct sleep_thread *st_b = list_entry(b, struct sleep_thread, elem);
 
-
+    // wake_up_time을 기준으로 비교 (오름차순 정렬)
+    return st_a->wake_up_time < st_b->wake_up_time;
 }
+
 
 
 /* Suspends execution for approximately MS milliseconds. */
@@ -152,8 +154,27 @@ timer_print_stats (void) {
 static void
 timer_interrupt (struct intr_frame *args UNUSED) {
 	ticks++;
+	check_sleeping_threads();
 	thread_tick ();
 }
+
+void
+check_sleeping_threads(void) {
+    struct list_elem *e;
+    struct thread *t;
+
+    // 슬립 리스트에서 대기 시간이 끝난 스레드를 찾아 깨우기
+    for (e = list_begin(&sleep_list); e != list_end(&sleep_list); e = list_next(e)) {
+        t = list_entry(e, struct thread, elem);
+
+        if (t->wake_up_time <= timer_ticks()) {
+            // 스레드를 깨우고 슬립 리스트에서 제거
+            thread_unblock(t);
+            list_remove(e);
+        }
+    }
+}
+
 
 /* Returns true if LOOPS iterations waits for more than one timer
    tick, otherwise false. */
