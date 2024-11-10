@@ -143,6 +143,8 @@ thread_init (void) {
 	initial_thread->tid = allocate_tid ();
 }
 
+/*---------------alarm clock ---------------------*/
+
 void thread_sleep(int64_t ticks)
 {
 	struct thread *curr = thread_current();
@@ -195,6 +197,20 @@ int64_t get_next_tick_to_awake(void)
  {
 	return next_tick_to_awake;
 }
+
+/*-----------------Priority Scheduling-------------------*/
+
+/* t_a와 t_b의 우선순위를 비교해 더 높은 애면 1을 반환*/
+bool cmp_priority (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED) 
+{
+	struct thread* t_a; 
+	struct thread* t_b;
+
+	t_a = list_entry(a, struct thread, elem);
+	t_b = list_entry(b, struct thread, elem);
+	return ((t_a->priority) > (t_b->priority)) ? true : false;
+}
+
 
 /* Starts preemptive thread scheduling by enabling interrupts.
    Also creates the idle thread. */
