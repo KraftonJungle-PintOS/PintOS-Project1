@@ -302,6 +302,15 @@ thread_create (const char *name, int priority,
 	/* Add to run queue. */
 	thread_unblock (t);
 
+	/* --- pjt 1.2 --- */
+	if (cmp_priority(&t->elem, &t->elem, NULL)) {
+		thread_yield();
+	}
+	/* 
+	thread unblock 후 현재 실행중인 thread와 우선순위 비교해서 
+	새로 생성된 thread 우선순위 높으면 thread_yield() 통해 cpu 양보
+	*/
+
 	return tid;
 }
 
@@ -410,6 +419,21 @@ thread_yield (void) {
 void
 thread_set_priority (int new_priority) {
 	thread_current ()->priority = new_priority;
+	test_max_priority();
+}
+
+void test_max_priority (void){
+	if (list_empty(&ready_list)) {
+		return;
+	}
+
+	int run_priority = thread_current()->priority;
+	struct list_elem *e = list_begin(&ready_list);
+	struct thread *t = list_entry(e, struct thread, elem);
+
+	if (t->priority > run_priority) {
+		thread_yield();
+	}
 }
 
 /* Returns the current thread's priority. */
